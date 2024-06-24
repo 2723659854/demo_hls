@@ -1,6 +1,7 @@
 package mpegts
-
+/* 视频流ID */
 var VideoMark byte = 0xe0
+/* 音频流ID */
 var AudioMark byte = 0xc0
 
 func hexPts(dpvalue uint32) []byte {
@@ -80,22 +81,36 @@ func PMT() []byte {
 	return bt
 }
 
+/* 这里是生成pes头 */
 // 首先使用nalu数据组合成es数据
 // pes header https://dvd.sourceforge.net/dvdinfo/pes-hdr.html
+/* 打包pes 类型音频 还是视频 ，播放时间戳，解码时间戳 */
 func PES(mtype byte, pts uint32, dts uint32) []byte {
+    /* 初始化一个头 */
 	header := make([]byte, 9)
+	/* 写入ts头 */
 	copy(header[0:3], []byte{0, 0, 1})
+	/* 包类型  音频or视频 */
 	header[3] = mtype
+	/* 这个是啥，可能是固定格式 */
 	header[6] = 0x80
+	/* 如果播放时间戳 > 0 */
 	if pts > 0 {
+	/* 如果解码时间戳大于0 视频帧的 dts大于0 */
 		if dts > 0 {
+		    /* 更改ts头的第7位 */
 			header[7] = 0xc0
+			/* 改变ts头第8位 */
 			header[8] = 0x0a
+			/* 把pts追加到header */
 			header = append(header, hexPts(pts)...)
+			/* 把dts追加到header */
 			header = append(header, hexDts(dts)...)
 		} else {
+		    /* 音频帧的dts = 0 */
 			header[7] = 0x80
 			header[8] = 0x05
+			/* 从代码看，音频只有播放时间戳pts */
 			header = append(header, hexPts(pts)...)
 		}
 	}
